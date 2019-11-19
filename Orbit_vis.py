@@ -11,12 +11,65 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-sys.path.insert(0, '../Aero_Funcs')
-
-import Aero_Funcs as AF
-import Aero_Plots as AP
-
 PARAMETERS = ['Semimajor Axis', 'Eccentricity', 'True Anomaly', 'Inclination', 'Right Ascention', 'Argument of Perigee']
+
+def plot_earth(ax, color = 'b', radius = 6378, alpha = .25, resolution = 100):
+    # Make data
+    u = np.linspace(0,2*np.pi, resolution)
+    v = np.linspace(0,np.pi, resolution)
+    x = radius * np.outer(np.cos(u), np.sin(v))
+    y = radius * np.outer(np.sin(u), np.sin(v))
+    z = radius * np.outer(np.ones(np.size(u)), np.cos(v))
+
+    # Plot the surface
+    ax.plot_surface(x, y, z, color=color,alpha = alpha)
+
+def coes2rv(a,ecc,TA,inc,RAAN,Arg_p,mu=398600):
+    
+    radTA = radians(TA)
+    
+    rp = a*(1-ecc**2)/(1+ecc)
+    h = sqrt(rp*mu*(1+ecc))
+    r_perifocal = (h**2/mu)*(1/(1 + ecc*cos(radTA)))*np.array([cos(radTA),sin(radTA),0]).T
+    v_perifocal = (mu/h)*np.array([-sin(radTA),ecc+cos(radTA),0]).T
+    ECI2P = Cz(Arg_p)@Cx(inc)@Cz(RAAN)
+    P2ECI = ECI2P.T
+    r = P2ECI@r_perifocal
+    v = P2ECI@v_perifocal
+    
+    return r, v
+
+def Cz(ang):
+    ang = radians(ang)
+    c = cos(ang)
+    s = sin(ang)
+    
+    C = np.array([[c,s,0],
+                   [-s,c,0],
+                   [0,0,1]])
+    return C
+
+def Cy(ang):
+    ang = radians(ang)
+    c = cos(ang)
+    s = sin(ang)
+    
+    C = np.array([[c,0,-s],
+                   [0,1,0],
+                   [s,0,c]])
+    
+    return C
+
+def Cx(ang):
+    ang = radians(ang)
+    c = cos(ang)
+    s = sin(ang)
+         
+    C = np.array([[1,0,0],
+                       [0,c,s],
+                       [0,-s,c]])
+    
+    return C
 
 class Window(QMainWindow):
 
@@ -85,20 +138,20 @@ class Window(QMainWindow):
         num_pts = 100
         for i in range(360):
             TA = i/num_pts*360
-            r, _ = AF.coes2rv(self.inputs[0], self.inputs[1], TA, self.inputs[3], self.inputs[4], self.inputs[5])
+            r, _ = coes2rv(self.inputs[0], self.inputs[1], TA, self.inputs[3], self.inputs[4], self.inputs[5])
             points.append(r)
         points = vstack(points)
 
-        peri, v_peri = AF.coes2rv(self.inputs[0], self.inputs[1], 0, self.inputs[3], self.inputs[4], self.inputs[5])
-        apo, _ = AF.coes2rv(self.inputs[0], self.inputs[1], 180, self.inputs[3], self.inputs[4], self.inputs[5])
+        peri, v_peri = coes2rv(self.inputs[0], self.inputs[1], 0, self.inputs[3], self.inputs[4], self.inputs[5])
+        apo, _ = coes2rv(self.inputs[0], self.inputs[1], 180, self.inputs[3], self.inputs[4], self.inputs[5])
         p_90, _ = AF.coes2rv(self.inputs[0], self.inputs[1], 90, self.inputs[3], self.inputs[4], self.inputs[5])
         n_90 = -p_90
 
         h = cross(peri, v_peri)/linalg.norm(cross(peri, v_peri))*6378*2
-        node_a, _ = AF.coes2rv(self.inputs[0], self.inputs[1], self.inputs[4], 0,0,0)
-        node_d, _ = AF.coes2rv(self.inputs[0], self.inputs[1], self.inputs[4]+180, 0, 0, 0)
+        node_a, _ = coes2rv(self.inputs[0], self.inputs[1], self.inputs[4], 0,0,0)
+        node_d, _ = coes2rv(self.inputs[0], self.inputs[1], self.inputs[4]+180, 0, 0, 0)
 
-        pos, _ = AF.coes2rv(self.inputs[0], self.inputs[1], self.inputs[2], self.inputs[3], self.inputs[4], self.inputs[5])
+        pos, _ = coes2rv(self.inputs[0], self.inputs[1], self.inputs[2], self.inputs[3], self.inputs[4], self.inputs[5])
 
         self.ax.clear()
         self.ax.plot(points[:,0], points[:,1], points[:,2], 'k-')
@@ -116,7 +169,7 @@ class Window(QMainWindow):
         self.ax.scatter(pos[0], pos[1], pos[2], 'ro')
 
 
-        AP.plot_earth(self.ax, resolution = 10)
+        plot_earth(self.ax, resolution = 10)
 
         scale = linalg.norm(apo)
         self.ax.set_xlim(-scale, scale)
