@@ -15,11 +15,11 @@ PARAMETERS = ['Semimajor Axis', 'Eccentricity', 'True Anomaly', 'Inclination', '
 
 def plot_earth(ax, color = 'b', radius = 6378, alpha = .25, resolution = 100):
     # Make data
-    u = np.linspace(0,2*np.pi, resolution)
-    v = np.linspace(0,np.pi, resolution)
-    x = radius * np.outer(np.cos(u), np.sin(v))
-    y = radius * np.outer(np.sin(u), np.sin(v))
-    z = radius * np.outer(np.ones(np.size(u)), np.cos(v))
+    u = linspace(0,2*pi, resolution)
+    v = linspace(0,pi, resolution)
+    x = radius * outer(cos(u), sin(v))
+    y = radius * outer(sin(u), sin(v))
+    z = radius * outer(ones(size(u)), cos(v))
 
     # Plot the surface
     ax.plot_surface(x, y, z, color=color,alpha = alpha)
@@ -30,8 +30,8 @@ def coes2rv(a,ecc,TA,inc,RAAN,Arg_p,mu=398600):
     
     rp = a*(1-ecc**2)/(1+ecc)
     h = sqrt(rp*mu*(1+ecc))
-    r_perifocal = (h**2/mu)*(1/(1 + ecc*cos(radTA)))*np.array([cos(radTA),sin(radTA),0]).T
-    v_perifocal = (mu/h)*np.array([-sin(radTA),ecc+cos(radTA),0]).T
+    r_perifocal = (h**2/mu)*(1/(1 + ecc*cos(radTA)))*array([cos(radTA),sin(radTA),0]).T
+    v_perifocal = (mu/h)*array([-sin(radTA),ecc+cos(radTA),0]).T
     ECI2P = Cz(Arg_p)@Cx(inc)@Cz(RAAN)
     P2ECI = ECI2P.T
     r = P2ECI@r_perifocal
@@ -44,7 +44,7 @@ def Cz(ang):
     c = cos(ang)
     s = sin(ang)
     
-    C = np.array([[c,s,0],
+    C = array([[c,s,0],
                    [-s,c,0],
                    [0,0,1]])
     return C
@@ -54,7 +54,7 @@ def Cy(ang):
     c = cos(ang)
     s = sin(ang)
     
-    C = np.array([[c,0,-s],
+    C = array([[c,0,-s],
                    [0,1,0],
                    [s,0,c]])
     
@@ -65,7 +65,7 @@ def Cx(ang):
     c = cos(ang)
     s = sin(ang)
          
-    C = np.array([[1,0,0],
+    C = array([[1,0,0],
                        [0,c,s],
                        [0,-s,c]])
     
@@ -144,7 +144,7 @@ class Window(QMainWindow):
 
         peri, v_peri = coes2rv(self.inputs[0], self.inputs[1], 0, self.inputs[3], self.inputs[4], self.inputs[5])
         apo, _ = coes2rv(self.inputs[0], self.inputs[1], 180, self.inputs[3], self.inputs[4], self.inputs[5])
-        p_90, _ = AF.coes2rv(self.inputs[0], self.inputs[1], 90, self.inputs[3], self.inputs[4], self.inputs[5])
+        p_90, _ = coes2rv(self.inputs[0], self.inputs[1], 90, self.inputs[3], self.inputs[4], self.inputs[5])
         n_90 = -p_90
 
         h = cross(peri, v_peri)/linalg.norm(cross(peri, v_peri))*6378*2
